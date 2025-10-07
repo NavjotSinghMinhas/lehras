@@ -2,23 +2,18 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings } from "lucide-react";
-
-const INSTRUMENTS = ["Harmonium","Sitar","Esraj","Tabla","Sarod","Violin","Santoor","Veena"];
-const RaagS = [
-  "Raag 1","Raag 2","Raag 3","Raag 4","Raag 5",
-  "Raag 6","Raag 7","Raag 8","Raag 9","Raag 10",
-  "Raag 11","Raag 12","Raag 13","Raag 14","Raag 15"
-];
+import data from "../assets/data_min.json"
 
 export default function CombinedSelectors({
-  taals,
-  selectedTaalName,
-  onTaalChange,
-  selectedInstrument,
-  onInstrumentChange,
-  selectedRaag,
-  onRaagChange
+    data,
+  selectedInstrumentIndex,
+                                            setSelectedInstrumentIndex,
+  selectedTaalIndex,
+                                            setSelectedTaalIndex,
+  selectedRaagIndex,
+                                            setSelectedRaagIndex
 }) {
+  
   return (
     <Card className="border-0 rounded-2xl nm-card">
       <CardHeader className="pb-2">
@@ -30,36 +25,36 @@ export default function CombinedSelectors({
       <CardContent className="space-y-2">
         <div>
           <div className="text-[11px] nm-text/70 mb-1">Instrument</div>
-          <Select value={selectedInstrument} onValueChange={onInstrumentChange}>
+          <Select value={selectedInstrumentIndex ?? ""} onValueChange={setSelectedInstrumentIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick instrument" />
             </SelectTrigger>
             <SelectContent>
-              {INSTRUMENTS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+              {data.map((i, index) => <SelectItem key={i.Name} value={index}>{i.Name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
         <div>
           <div className="text-[11px] nm-text/70 mb-1">Taal</div>
-          <Select value={selectedTaalName} onValueChange={onTaalChange}>
+          <Select value={selectedTaalIndex ?? ""} onValueChange={setSelectedTaalIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick taal" />
             </SelectTrigger>
             <SelectContent>
-              {taals.map(t => <SelectItem key={t.name} value={t.name}>{t.name} ({t.beats})</SelectItem>)}
+              {data[selectedInstrumentIndex]?.Taals.map((t, index) => <SelectItem key={t.Name} value={index}>{t.Name} ({t.Beats})</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
         <div>
-          <div className="text-[11px] nm-text/70 mb-1">Raags</div>
-          <Select value={selectedRaag} onValueChange={onRaagChange}>
+          <div className="text-[11px] nm-text/70 mb-1">Raag</div>
+          <Select value={selectedRaagIndex ?? ""} onValueChange={setSelectedRaagIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick raag" />
             </SelectTrigger>
             <SelectContent>
-              {RaagS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              {data[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Raags.map((r, index) => <SelectItem key={r.Name} value={index}>{r.Name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

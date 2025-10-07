@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Volume2 } from "lucide-react";
 
-export default function VolumePanel({ master, onMasterChange, volumes, onVolumeChange }) {
+export default function VolumePanel({ volumes, onVolumeChange }) {
   const change = (key, val) => onVolumeChange({ ...volumes, [key]: val });
 
   return (
@@ -15,10 +15,6 @@ export default function VolumePanel({ master, onMasterChange, volumes, onVolumeC
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div>
-          <div className="text-[11px] nm-text/70 mb-1">Master</div>
-          <Slider value={[master]} onValueChange={(v) => onMasterChange(v[0])} max={1} step={0.05} />
-        </div>
         <div>
           <div className="text-[11px] nm-text/70 mb-1">Lehra</div>
           <Slider value={[volumes.lehra]} onValueChange={(v) => change('lehra', v[0])} max={1} step={0.05} />

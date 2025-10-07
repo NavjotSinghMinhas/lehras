@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="9ada3937-7a7c-4635-b072-37b3620399cc" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/assets/data.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/data.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/assets/data_min.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/data_min.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/audioPlayer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/audioPlayer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/combinedSelectors.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/combinedSelectors.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/volumePanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/volumePanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,6 +37,9 @@
     "accountId": "1b395614-db6a-4ed1-bf0e-a6640ad4b306"
   }
 }]]></component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/src/lib/dataType.ts" root0="SKIP_HIGHLIGHTING" />
+  </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 3
@@ -36,14 +52,27 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "JavaScript Debug.Debug.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "ts.external.directory.path": "/Users/navjotminhas/Programming/GitHub/lehras/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration name="Debug" type="JavascriptDebugType" uri="http://localhost:5173">
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="9ada3937-7a7c-4635-b072-37b3620399cc" name="Changes" comment="" />
@@ -51,7 +80,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1759466747030</updated>
-      <workItem from="1759466748830" duration="306000" />
+      <workItem from="1759466748830" duration="40354000" />
     </task>
     <servers />
   </component>
@@ -78,6 +107,12 @@
           <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
           <option name="timeStamp" value="3" />
         </breakpoint>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/src/components/audioPlayer.jsx</url>
+          <line>141</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="38" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>

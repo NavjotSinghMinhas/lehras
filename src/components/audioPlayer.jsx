@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
 import { loadSound } from "./../lib/sounds";
 
@@ -7,31 +7,40 @@ export default function AudioPlayer({
   triggerPlay,
   beats,
   tempos,
-  volume = 1,
-  bpm = 75,
-  cents = 0,
+  volume,
+  bpm,
+  cents,
   setCurrentBeat
 }) {
   const playerRef = useRef(null);
   const shiftRef = useRef(null);
 
   // Compute loop timings only when bpm/tempos/beats change
-  const [start, end, audioBpm] = useMemo(() => {
-    let start = 0;
-    let end = 0;
-    let audioBpm = 0;
+  const [start, setStart] = useState(0);
+  const [end, setEnd] = useState(0);
+  const [audioBpm, setAudioBpm] = useState(0);
+  
+  const calculateStartEndTimings = () => {
+    if (!fileName) return [0, 0, 0];
+
+    console.log("Calculating start, end timings for bpm:", bpm, "audio:", fileName);
+    let startVal = 0;
+    let endVal = 0;
+    let audioBpmVal = 0;
 
     for (let i = 0; i < tempos.length; i++) {
       const segment = (60 / tempos[i]) * beats;
-      audioBpm = tempos[i];
+      audioBpmVal = tempos[i];
       if (bpm <= tempos[i]) {
-        return [end, end + segment, audioBpm];
+        console.log("Found time for bpm:", bpm, "          start:", endVal, "end", endVal + segment);
+        return [endVal, endVal + segment, audioBpmVal];
       }
-      start = end;
-      end += segment;
+      startVal = endVal;
+      endVal += segment;
     }
-    return [start, end, audioBpm];
-  }, [bpm, fileName]);
+    console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
+    return [startVal, endVal > playerRef.current?.buffer.duration ?? endVal ? playerRef.current.buffer.duration : endVal, audioBpmVal];
+  }
 
   // Helper to dispose safely
   const disposePlayer = () => {
@@ -39,58 +48,72 @@ export default function AudioPlayer({
       playerRef.current.stop();
       playerRef.current.dispose();
       playerRef.current = null;
+      console.log("Player disposed");
     }
     if (shiftRef.current) {
       shiftRef.current.dispose();
       shiftRef.current = null;
+      console.log("Shift disposed");
     }
   };
 
-  // Initialize new player when fileName changes
+  const initPlayer = async () => {
+    const soundPath = await loadSound(fileName);
+    if (!soundPath) return;
+
+    disposePlayer();
+    console.log("player init called for", fileName);
+    // Calculate timings
+    let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
+    setStart(startVal);
+    setEnd(endVal);
+    setAudioBpm(audioBpmVal);
+    
+    await Tone.start();
+
+    playerRef.current = new Tone.GrainPlayer({
+      url: soundPath,
+      loop: true,
+      loopStart: startVal,
+      loopEnd: endVal,
+    }).toDestination();
+
+    shiftRef.current = new Tone.PitchShift(cents ?? 0 / 100).toDestination();
+    playerRef.current.connect(shiftRef.current);
+
+    playerRef.current.volume.value = Tone.gainToDb(volume);
+    playerRef.current.playbackRate = bpm / audioBpmVal;
+    console.log("player initialized");
+  };
+
+  
+  /************* Effects *************/
+  
+    // Initialize new player when fileName changes
   useEffect(() => {
     if (!fileName) return;
 
     let isMounted = true;
 
     const init = async () => {
-      const soundPath = await loadSound(fileName);
-      if (!soundPath || !isMounted) return;
-
-      disposePlayer();
-      await Tone.start();
-
       if (!isMounted) return;
-
-      playerRef.current = new Tone.GrainPlayer({
-        url: soundPath,
-        loop: true,
-        //grainSize: 0.2,
-        //overlap: 0.1,
-        loopStart: start,
-        loopEnd: end,
-      }).toDestination();
-
-      shiftRef.current = new Tone.PitchShift(cents / 100).toDestination();
-      playerRef.current.connect(shiftRef.current);
-
-      playerRef.current.volume.value = Tone.gainToDb(volume);
-      playerRef.current.playbackRate = bpm / audioBpm;
+      await initPlayer();
     };
 
     init();
-
-    return () => {
-      isMounted = false;
-      disposePlayer();
-    };
   }, [fileName]); // only rebuild when file changes
 
   // Handle play/stop
   useEffect(() => {
-    if (!playerRef.current) return;
+    if (!playerRef.current) {
+        return;
+    }
+    
     if (triggerPlay) {
-      playerRef.current.start(undefined, start);
+      console.log("Player played with tempos:", tempos, " at start", start, "and end", end, "            Play? ", triggerPlay);
+      playerRef.current.start(undefined, start * (audioBpm / bpm));
     } else {
+        console.log("Player stopped");
       playerRef.current.stop();
     }
   }, [triggerPlay]);
@@ -105,15 +128,26 @@ export default function AudioPlayer({
   // Handle bpm changes (update loop + playback rate)
   useEffect(() => {
     if (!playerRef.current) return;
+    
+    // Recalculate timings
+    let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
+    setStart(startVal);
+    setEnd(endVal);
+    setAudioBpm(audioBpmVal);
+
+    console.log("bpm change entered bpm:", bpm, "file:", fileName, "start:", startVal, "end:", endVal, "audioBpm:", audioBpmVal);
 
     playerRef.current.stop();
-    playerRef.current.loopStart = start;
-    playerRef.current.loopEnd = end;
-    playerRef.current.playbackRate = bpm / audioBpm;
+    playerRef.current.loopStart = startVal;
+    playerRef.current.loopEnd = endVal;
+    playerRef.current.playbackRate = bpm / audioBpmVal;
+    console.log("playback rate set to ", bpm / audioBpmVal);
 
     if (triggerPlay) {
-      playerRef.current.start(undefined, start* (audioBpm / bpm));
+      playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
+      console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm));
     }
+    console.log("bpm change handled");
   }, [bpm]);
 
   // Handle pitch shift changes
@@ -126,8 +160,9 @@ export default function AudioPlayer({
   // Handle beat changes
   useEffect(() => {
     if (!playerRef.current) return;
-
+    
     if (triggerPlay) {
+      console.log("Starting beats timer:        new bpm: ", bpm, "file:", fileName);
       Tone.Transport.cancel();
       Tone.Transport.scheduleRepeat(() => {
         setCurrentBeat(prev => (prev % beats) + 1);
@@ -137,11 +172,10 @@ export default function AudioPlayer({
       Tone.Transport.start();
     } 
     else {
-      Tone.Transport.stop();
+      console.log("Stopping beats timer:        new bpm: ", bpm, "file:", fileName);
       Tone.Transport.cancel();
     }
-    
-  }, [triggerPlay, bpm, fileName]);
+  }, [triggerPlay, bpm]);
 
   return null;
 }
