@@ -5,20 +5,51 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SlidersHorizontal, Plus, Minus } from "lucide-react";
 
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTES = [
+  { note: 'G', octave: 2 },
+  { note: 'G#', octave: 2 },
+  { note: 'A', octave: 2 },
+  { note: 'A#', octave: 2 },
+  { note: 'B', octave: 2 },
+  { note: 'C', octave: 3 },
+  { note: 'C#', octave: 3 },
+  { note: 'D', octave: 3 },
+  { note: 'D#', octave: 3 },
+  { note: 'E', octave: 3 },
+  { note: 'F', octave: 3 },
+  { note: 'F#', octave: 3 },
+];
+
+function getFrequency(note, octave) {
+  const NOTES_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+  octave ??= NOTES.find(n => n.note === note).octave;
+  const semitoneIndex = NOTES_ORDER.indexOf(note);
+  if (semitoneIndex === -1) throw new Error("Invalid note: " + note);
+
+  const totalSemitones = semitoneIndex + octave * 12;
+  return Number((16.3516 * Math.pow(2, totalSemitones / 12)).toFixed(2));
+}
 
 export default function FrequencySelector({ frequency, onFrequencyChange }) {
-  const calculateFrequency = (note, octave, cents) => {
-    const noteIndex = NOTES.indexOf(note);
-    const semitonesFromA4 = (octave - 4) * 12 + (noteIndex - 9);
-    const baseFreq = 440 * Math.pow(2, semitonesFromA4 / 12);
-    const centAdjustment = Math.pow(2, cents / 1200);
-    return Math.round(baseFreq * centAdjustment * 100) / 100;
-  };
-  const adjustCents = (delta) => onFrequencyChange({ ...frequency, cents: Math.max(-50, Math.min(50, frequency.cents + delta)) });
-  const nextNote = () => onFrequencyChange({ ...frequency, note: NOTES[(NOTES.indexOf(frequency.note) + 1) % NOTES.length] });
-  const prevNote = () => onFrequencyChange({ ...frequency, note: NOTES[(NOTES.indexOf(frequency.note) - 1 + NOTES.length) % NOTES.length] });
-  const currentFreq = calculateFrequency(frequency.note, frequency.octave, frequency.cents);
+  const adjustCents = (delta) => onFrequencyChange({ ...frequency, cents: Math.max(-100, Math.min(100, frequency.cents + delta)) });
+  const nextNote = () => {
+    frequency.cents = 0; // Reset cents when changing note
+    onFrequencyChange({
+      ...frequency,
+      note: NOTES[NOTES.findIndex(n => n.note === frequency.note) + 1]?.note ?? frequency.note,
+      octave: NOTES[NOTES.findIndex(n => n.note === frequency.note) + 1]?.octave ?? frequency.octave,
+    });
+  }
+  const prevNote = () => {
+    frequency.cents = 0; // Reset cents when changing note
+    onFrequencyChange({
+      ...frequency,
+      note: NOTES[NOTES.findIndex(n => n.note === frequency.note) - 1]?.note ?? frequency.note,
+      octave: NOTES[NOTES.findIndex(n => n.note === frequency.note) - 1]?.octave ?? frequency.octave,
+    });
+  }
+  const currentFreq = Number(getFrequency(frequency.note) * Math.pow(2, frequency.cents / 1200)).toFixed(2);
 
   return (
     <Card className="border-0 rounded-2xl nm-card">
@@ -51,13 +82,13 @@ export default function FrequencySelector({ frequency, onFrequencyChange }) {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => adjustCents(-5)} className="h-8 w-8 rounded-full nm-button">
+            <Button variant="outline" size="icon" onClick={() => adjustCents(-1)} className="h-8 w-8 rounded-full nm-button">
               <Minus className="w-3.5 h-3.5" />
             </Button>
             <div className="flex-1">
-              <Slider value={[frequency.cents]} onValueChange={(v) => onFrequencyChange({ ...frequency, cents: v[0] })} min={-50} max={50} step={1} />
+              <Slider value={[frequency.cents]} onValueChange={(v) => onFrequencyChange({ ...frequency, cents: v[0] })} min={-100} max={100} step={1} />
             </div>
-            <Button variant="outline" size="icon" onClick={() => adjustCents(5)} className="h-8 w-8 rounded-full nm-button">
+            <Button variant="outline" size="icon" onClick={() => adjustCents(1)} className="h-8 w-8 rounded-full nm-button">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </div>

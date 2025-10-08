@@ -9,9 +9,11 @@ export default function AudioPlayer({
   tempos,
   volume,
   bpm,
-  cents,
+  frequency,
   setCurrentBeat
 }) {
+  const NOTES_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
   const playerRef = useRef(null);
   const shiftRef = useRef(null);
 
@@ -29,20 +31,20 @@ export default function AudioPlayer({
     let audioBpmVal = 0;
 
     for (let i = 0; i < tempos.length; i++) {
-      const segment = Number(((60 / tempos[i]) * beats).toFixed(2));
+      const segment = Number(((60 / tempos[i]) * beats).toFixed(3));
       audioBpmVal = tempos[i];
       if (bpm <= tempos[i]) {
         console.log("Found time for bpm:", bpm, "          start:", endVal, "end", endVal + segment);
-        return [Number(endVal.toFixed(2)), Number((endVal + segment).toFixed(2)), audioBpmVal];
+        return [Number(endVal.toFixed(3)), Number((endVal + segment).toFixed(3)), audioBpmVal];
       }
       startVal = endVal;
       endVal += segment;
     }
     console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-    return [Number(startVal.toFixed(2)), 
-      endVal > playerRef.current?.buffer.duration ?? Number(endVal.toFixed(2)) 
+    return [Number(startVal.toFixed(3)), 
+      endVal > playerRef.current?.buffer.duration ?? Number(endVal.toFixed(3)) 
           ? playerRef.current.buffer.duration 
-          : Number(endVal.toFixed(2)), audioBpmVal];
+          : Number(endVal.toFixed(3)), audioBpmVal];
   }
 
   // Helper to dispose safely
@@ -81,7 +83,8 @@ export default function AudioPlayer({
       loopEnd: endVal,
     }).toDestination();
 
-    shiftRef.current = new Tone.PitchShift(cents ?? 0 / 100).toDestination();
+    shiftRef.current = new Tone.PitchShift(0).toDestination();
+    playerRef.current.detune = frequency.cents;
     playerRef.current.connect(shiftRef.current);
 
     playerRef.current.volume.value = Tone.gainToDb(volume);
@@ -148,17 +151,34 @@ export default function AudioPlayer({
 
     if (triggerPlay) {
       playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
-      console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm));
+      console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm), " pitch", shiftRef.current.pitch);
     }
     console.log("bpm change handled");
   }, [bpm]);
+  
+  const getCentsFromNote = (note) => {
+    const newIndex = NOTES_ORDER.indexOf(frequency.note);
+    const previousIndex = NOTES_ORDER.indexOf('D'); // Assuming initial note is D
+
+    // Assuming initial octave is 3
+    return ((frequency.octave - 3) * 12 + (newIndex - previousIndex))*100;
+  }
+
+  // Handle note shift changes
+  useEffect(() => {
+    if (shiftRef.current) {
+      playerRef.current.detune = getCentsFromNote(frequency.note);
+      console.log("Note shift changed to ", playerRef.current.detune);
+    }
+  }, [frequency.note]);
 
   // Handle pitch shift changes
   useEffect(() => {
     if (shiftRef.current) {
-      shiftRef.current.pitch = cents / 100;
+      playerRef.current.detune = getCentsFromNote(frequency.note) + frequency.cents;
+      console.log("Pitch shift changed to ", frequency.cents);
     }
-  }, [cents]);
+  }, [frequency.cents]);
 
   // Handle beat changes
   useEffect(() => {

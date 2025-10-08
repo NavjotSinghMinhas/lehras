@@ -44,7 +44,7 @@ export default function TablaPractice() {
   const [selectedRaagIndex, setSelectedRaagIndex] = useState<number | null>(null);
 
   // Sound state
-  const [frequency, setFrequency] = useState({ note: "C#", octave: 4, cents: 0 });
+  const [frequency, setFrequency] = useState({ note: "D", octave: 3, cents: 0 });
   const [volumes, setVolumes] = useState({ lehra: 0.7, tanpura: 0.55, metronome: 0 });
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(75);
@@ -222,6 +222,7 @@ export default function TablaPractice() {
             tempos={tempos}
             fileName={soundName}
             bpm={bpm}
+            frequency={frequency}
             setCurrentBeat={setCurrentBeat}
         />
 

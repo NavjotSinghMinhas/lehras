@@ -6,7 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="9ada3937-7a7c-4635-b072-37b3620399cc" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/audioPlayer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/audioPlayer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/frequencySelector.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/frequencySelector.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +74,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1759466747030</updated>
-      <workItem from="1759466748830" duration="42951000" />
+      <workItem from="1759466748830" duration="53668000" />
     </task>
     <task id="LOCAL-00001" summary="Changes">
       <option name="closed" value="true" />
@@ -90,7 +92,15 @@
       <option name="project" value="LOCAL" />
       <updated>1759877726476</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Test live">
+      <option name="closed" value="true" />
+      <created>1759894035071</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1759894035071</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -113,7 +123,8 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="Changes" />
     <MESSAGE value="Deployment" />
-    <option name="LAST_COMMIT_MESSAGE" value="Deployment" />
+    <MESSAGE value="Test live" />
+    <option name="LAST_COMMIT_MESSAGE" value="Test live" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -130,6 +141,12 @@
           <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
           <option name="timeStamp" value="3" />
         </breakpoint>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/src/components/audioPlayer.jsx</url>
+          <line>163</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="51" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
