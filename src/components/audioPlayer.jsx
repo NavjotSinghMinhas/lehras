@@ -29,17 +29,20 @@ export default function AudioPlayer({
     let audioBpmVal = 0;
 
     for (let i = 0; i < tempos.length; i++) {
-      const segment = (60 / tempos[i]) * beats;
+      const segment = Number(((60 / tempos[i]) * beats).toFixed(2));
       audioBpmVal = tempos[i];
       if (bpm <= tempos[i]) {
         console.log("Found time for bpm:", bpm, "          start:", endVal, "end", endVal + segment);
-        return [endVal, endVal + segment, audioBpmVal];
+        return [Number(endVal.toFixed(2)), Number((endVal + segment).toFixed(2)), audioBpmVal];
       }
       startVal = endVal;
       endVal += segment;
     }
     console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-    return [startVal, endVal > playerRef.current?.buffer.duration ?? endVal ? playerRef.current.buffer.duration : endVal, audioBpmVal];
+    return [Number(startVal.toFixed(2)), 
+      endVal > playerRef.current?.buffer.duration ?? Number(endVal.toFixed(2)) 
+          ? playerRef.current.buffer.duration 
+          : Number(endVal.toFixed(2)), audioBpmVal];
   }
 
   // Helper to dispose safely
@@ -138,9 +141,9 @@ export default function AudioPlayer({
     console.log("bpm change entered bpm:", bpm, "file:", fileName, "start:", startVal, "end:", endVal, "audioBpm:", audioBpmVal);
 
     playerRef.current.stop();
+    playerRef.current.playbackRate = bpm / audioBpmVal;
     playerRef.current.loopStart = startVal;
     playerRef.current.loopEnd = endVal;
-    playerRef.current.playbackRate = bpm / audioBpmVal;
     console.log("playback rate set to ", bpm / audioBpmVal);
 
     if (triggerPlay) {
