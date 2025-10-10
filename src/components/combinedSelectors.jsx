@@ -2,7 +2,6 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings } from "lucide-react";
-import data from "../assets/data_min.json"
 
 export default function CombinedSelectors({
     data,
@@ -24,7 +23,6 @@ export default function CombinedSelectors({
       </CardHeader>
       <CardContent className="space-y-2">
         <div>
-          <div className="text-[11px] nm-text/70 mb-1">Instrument</div>
           <Select value={selectedInstrumentIndex ?? ""} onValueChange={setSelectedInstrumentIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick instrument" />
@@ -36,7 +34,6 @@ export default function CombinedSelectors({
         </div>
 
         <div>
-          <div className="text-[11px] nm-text/70 mb-1">Taal</div>
           <Select value={selectedTaalIndex ?? ""} onValueChange={setSelectedTaalIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick taal" />
@@ -48,7 +45,6 @@ export default function CombinedSelectors({
         </div>
 
         <div>
-          <div className="text-[11px] nm-text/70 mb-1">Raag</div>
           <Select value={selectedRaagIndex ?? ""} onValueChange={setSelectedRaagIndex}>
             <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
               <SelectValue placeholder="Pick raag" />

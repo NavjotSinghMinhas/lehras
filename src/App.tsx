@@ -108,10 +108,11 @@ export default function TablaPractice() {
   const themeVars = useMemo(() => {
     if (!darkMode) {
       return {
-        "--bg": "#f3f4f6",
+        "--bg": "#ffffff",
         "--surface": "#f5f5f5",
         "--text": "#1f2937",
         "--shadow-out": "6px 6px 12px rgba(0,0,0,0.08), -6px -6px 12px rgba(255,255,255,0.9)",
+        "justify-content": "center"
       } as React.CSSProperties;
     }
     const t = Math.min(1, Math.max(0, darkIntensity / 100));
@@ -120,6 +121,7 @@ export default function TablaPractice() {
       "--surface": mix("#171a1f", "#1c2027", t),
       "--text": mix("#e5e7eb", "#ffffff", t * 0.3),
       "--shadow-out": `6px 6px 12px rgba(0,0,0,${0.55 + 0.25 * t}), -6px -6px 12px rgba(255,255,255,${0.04 + 0.04 * t})`,
+      "justify-content": "center"
     } as React.CSSProperties;
   }, [darkMode, darkIntensity]);
 
@@ -139,7 +141,7 @@ export default function TablaPractice() {
             <div className="w-8 h-8 rounded-xl nm-card flex items-center justify-center">
               <Music className="w-4 h-4 nm-text" />
             </div>
-            <h1 className="text-lg sm:text-xl font-bold nm-text tracking-tight">Tabla Practice</h1>
+            <span className="text-base sm:text-lg font-bold nm-text tracking-tight">Lehras</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -165,8 +167,8 @@ export default function TablaPractice() {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 px-3 pb-2 nm-bg">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="px-3 pb-2 nm-bg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FrequencySelector frequency={frequency} onFrequencyChange={setFrequency} />
 
             <Card className="border-0 rounded-2xl nm-card">
@@ -227,9 +229,9 @@ export default function TablaPractice() {
         />
 
         {/* Footer */}
-        <div className="h-14 w-full nm-surface border-t border-black/10 flex items-center justify-center text-xs nm-text">
-          Ad space
-        </div>
+        {/*<div className="h-14 w-full nm-surface border-t border-black/10 flex items-center justify-center text-xs nm-text">*/}
+        {/*  Ad space*/}
+        {/*</div>*/}
       </div>
   );
 }
