@@ -42,8 +42,8 @@ export default function AudioPlayer({
         startVal = endVal;
         endVal += segment;
         console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-        return [roundDown(2),
-          endVal > playerRef.current?.buffer.duration ?? roundDown(endVal)
+        return [roundDown(startVal),
+          endVal > playerRef.current?.buffer.duration ?? endVal
               ? playerRef.current.buffer.duration
               : roundDown(endVal), audioBpmVal];
       }
@@ -51,8 +51,8 @@ export default function AudioPlayer({
       endVal += segment;
     }
     console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-    return [roundDown(2),
-      endVal > playerRef.current?.buffer.duration ?? roundDown(endVal)
+    return [roundDown(startVal),
+      endVal > playerRef.current?.buffer.duration ?? endVal
           ? playerRef.current.buffer.duration 
           : roundDown(endVal), audioBpmVal];
   }
