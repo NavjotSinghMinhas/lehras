@@ -4,13 +4,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Settings } from "lucide-react";
 
 export default function CombinedSelectors({
-    data,
+  data,
   selectedInstrumentIndex,
-                                            setSelectedInstrumentIndex,
+  setSelectedInstrumentIndex,
   selectedTaalIndex,
-                                            setSelectedTaalIndex,
+  setSelectedTaalIndex,
   selectedRaagIndex,
-                                            setSelectedRaagIndex
+  setSelectedRaagIndex
 }) {
   
   return (

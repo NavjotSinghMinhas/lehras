@@ -59,7 +59,14 @@ export default function TablaPractice() {
   const [darkMode, setDarkMode] = useState(false);
   const [darkIntensity, setDarkIntensity] = useState(60);
 
-  const togglePlay = () => setIsPlaying((p) => !p);
+  const togglePlay = () => {
+    if(!soundName) {
+        alert("Please select an instrument, taal, and raag first.");
+        return;
+    }
+    
+    setIsPlaying((p) => !p)
+  };
 
   // Selection handlers
   const updateSelection = (instrument?: number, taal?: number, raag?: number) => {
@@ -92,14 +99,14 @@ export default function TablaPractice() {
   // Tap tempo
   const tapRef = useRef<number[]>([]);
   const handleTapTempo = () => {
-    const now = Date.now();
-    tapRef.current = [...tapRef.current.filter((t) => now - t < 3000), now];
-    if (tapRef.current.length >= 2) {
-      const intervals = tapRef.current.slice(1).map((t, i) => t - tapRef.current[i]);
-      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const calc = Math.round(60000 / avg);
-      setBpm(Math.max(40, Math.min(300, calc)));
-    }
+    if(selectedInstrumentIndex == null && selectedTaalIndex == null && selectedRaagIndex == null) return;
+
+    const tempos = instruments[selectedInstrumentIndex]
+        .Taals[selectedTaalIndex]
+        .Raags[selectedRaagIndex]
+        .Tempos;
+
+    setBpm(tempos.find(t => t > bpm) ?? tempos[0]);
   };
 
   const adjustBpm = (delta: number) => setBpm((prev) => Math.max(minTempo, Math.min(maxTempo, prev + delta)));
@@ -112,7 +119,7 @@ export default function TablaPractice() {
         "--surface": "#f5f5f5",
         "--text": "#1f2937",
         "--shadow-out": "6px 6px 12px rgba(0,0,0,0.08), -6px -6px 12px rgba(255,255,255,0.9)",
-        "justify-content": "center"
+        justifyContent: "center"
       } as React.CSSProperties;
     }
     const t = Math.min(1, Math.max(0, darkIntensity / 100));
@@ -229,7 +236,7 @@ export default function TablaPractice() {
         />
 
         {/* Footer */}
-        {/*<div className="h-14 w-full nm-surface border-t border-black/10 flex items-center justify-center text-xs nm-text">*/}
+        {/*<div style={{position: "fixed", left: 0, right: 0, bottom: 0}} className="h-14 w-full nm-surface border-t border-black/10 flex items-center justify-center text-xs nm-text">*/}
         {/*  Ad space*/}
         {/*</div>*/}
       </div>

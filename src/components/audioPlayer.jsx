@@ -21,6 +21,11 @@ export default function AudioPlayer({
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(0);
   const [audioBpm, setAudioBpm] = useState(0);
+
+  const roundDown = (num, decimals = 2) => {
+    const factor = Math.pow(10, decimals);
+    return (Math.floor(num * factor) / factor).toFixed(decimals);
+  };
   
   const calculateStartEndTimings = () => {
     if (!fileName) return [0, 0, 0];
@@ -31,20 +36,25 @@ export default function AudioPlayer({
     let audioBpmVal = 0;
 
     for (let i = 0; i < tempos.length; i++) {
-      const segment = Number(((60 / tempos[i]) * beats).toFixed(3));
+      const segment = Number(((60 / tempos[i]) * beats).toFixed(2));
       audioBpmVal = tempos[i];
       if (bpm <= tempos[i]) {
-        console.log("Found time for bpm:", bpm, "          start:", endVal, "end", endVal + segment);
-        return [Number(endVal.toFixed(3)), Number((endVal + segment).toFixed(3)), audioBpmVal];
+        startVal = endVal;
+        endVal += segment;
+        console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
+        return [roundDown(2),
+          endVal > playerRef.current?.buffer.duration ?? roundDown(endVal)
+              ? playerRef.current.buffer.duration
+              : roundDown(endVal), audioBpmVal];
       }
       startVal = endVal;
       endVal += segment;
     }
     console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-    return [Number(startVal.toFixed(3)), 
-      endVal > playerRef.current?.buffer.duration ?? Number(endVal.toFixed(3)) 
+    return [roundDown(2),
+      endVal > playerRef.current?.buffer.duration ?? roundDown(endVal)
           ? playerRef.current.buffer.duration 
-          : Number(endVal.toFixed(3)), audioBpmVal];
+          : roundDown(endVal), audioBpmVal];
   }
 
   // Helper to dispose safely
@@ -135,25 +145,30 @@ export default function AudioPlayer({
   useEffect(() => {
     if (!playerRef.current) return;
     
-    // Recalculate timings
-    let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
-    setStart(startVal);
-    setEnd(endVal);
-    setAudioBpm(audioBpmVal);
+    try {
+      // Recalculate timings
+      let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
+      setStart(startVal);
+      setEnd(endVal);
+      setAudioBpm(audioBpmVal);
 
-    console.log("bpm change entered bpm:", bpm, "file:", fileName, "start:", startVal, "end:", endVal, "audioBpm:", audioBpmVal);
+      console.log("bpm change entered bpm:", bpm, "file:", fileName, "start:", startVal, "end:", endVal, "audioBpm:", audioBpmVal);
 
-    playerRef.current.stop();
-    playerRef.current.playbackRate = bpm / audioBpmVal;
-    playerRef.current.loopStart = startVal;
-    playerRef.current.loopEnd = endVal;
-    console.log("playback rate set to ", bpm / audioBpmVal);
+      playerRef.current.stop();
+      playerRef.current.playbackRate = bpm / audioBpmVal;
+      playerRef.current.loopStart = startVal;
+      playerRef.current.loopEnd = endVal;
+      console.log("playback rate set to ", bpm / audioBpmVal);
 
-    if (triggerPlay) {
-      playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
-      console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm), " pitch", shiftRef.current.pitch);
+      if (triggerPlay) {
+        playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
+        console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm), " pitch", shiftRef.current.pitch);
+      }
+      console.log("bpm change handled");
     }
-    console.log("bpm change handled");
+    catch (error) {
+      console.error("Error handling bpm change:", error);
+    }
   }, [bpm]);
   
   const getCentsFromNote = (note) => {
@@ -186,12 +201,11 @@ export default function AudioPlayer({
     
     if (triggerPlay) {
       console.log("Starting beats timer:        new bpm: ", bpm, "file:", fileName);
+      setCurrentBeat(0);
       Tone.Transport.cancel();
       Tone.Transport.scheduleRepeat(() => {
         setCurrentBeat(prev => (prev % beats) + 1);
       }, 60 / bpm);
-
-      setCurrentBeat(0);
       Tone.Transport.start();
     } 
     else {

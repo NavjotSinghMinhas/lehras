@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, Plus, Minus } from "lucide-react";
+import { SlidersHorizontal, Plus, Minus, SkipBack, SkipForward } from "lucide-react";
 
 const NOTES = [
   { note: 'G', octave: 2 },
@@ -62,7 +62,9 @@ export default function FrequencySelector({ frequency, onFrequencyChange }) {
       <CardContent className="space-y-3">
         {/* Central note display with prev/next (octave +/- removed) */}
         <div className="flex items-center justify-center gap-3">
-          <button onClick={prevNote} className="h-9 w-9 rounded-full nm-button" aria-label="Prev note" />
+          <button onClick={prevNote} className="h-9 w-9 rounded-full nm-button inline-flex items-center justify-center p-0" style={{padding: 0}} aria-label="Prev note">
+            <SkipBack className="h-5 w-5" />
+          </button>
           <div className="relative w-24 h-24 rounded-full nm-card flex items-center justify-center">
             <div className="text-center">
               <div className="text-2xl font-bold nm-text leading-tight">{frequency.note}</div>
@@ -70,7 +72,9 @@ export default function FrequencySelector({ frequency, onFrequencyChange }) {
               <div className="text-[10px] nm-text/60">{frequency.cents > 0 ? '+' : ''}{frequency.cents}c</div>
             </div>
           </div>
-          <button onClick={nextNote} className="h-9 w-9 rounded-full nm-button" aria-label="Next note" />
+          <button onClick={nextNote} className="h-9 w-9 rounded-full nm-button inline-flex items-center justify-center p-0" style={{padding: 0}} aria-label="Next note">
+            <SkipForward className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Fine tuning slider with +/- buttons only */}
