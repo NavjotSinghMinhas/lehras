@@ -16,6 +16,7 @@ export default function AudioPlayer({
 
   const playerRef = useRef(null);
   const shiftRef = useRef(null);
+  const wakeLockRef = useRef(null);
 
   // Compute loop timings only when bpm/tempos/beats change
   const [start, setStart] = useState(0);
@@ -72,6 +73,25 @@ export default function AudioPlayer({
     }
   };
 
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('Wake Lock acquired');
+      }
+    } catch (err) {
+      console.error('Wake Lock error:', err);
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLockRef.current) {
+      await wakeLockRef.current.release();
+      wakeLockRef.current = null;
+      console.log('Wake Lock released');
+    }
+  };
+
   const initPlayer = async () => {
     const soundPath = await loadSound(fileName);
     if (!soundPath) return;
@@ -83,8 +103,6 @@ export default function AudioPlayer({
     setStart(startVal);
     setEnd(endVal);
     setAudioBpm(audioBpmVal);
-    
-    await Tone.start();
 
     playerRef.current = new Tone.GrainPlayer({
       url: soundPath,
@@ -92,6 +110,8 @@ export default function AudioPlayer({
       loopStart: startVal,
       loopEnd: endVal,
     }).toDestination();
+
+    await Tone.start();
 
     shiftRef.current = new Tone.PitchShift(0).toDestination();
     playerRef.current.detune = frequency.cents;
@@ -128,9 +148,13 @@ export default function AudioPlayer({
     if (triggerPlay) {
       console.log("Player played with tempos:", tempos, " at start", start, "and end", end, "            Play? ", triggerPlay);
       playerRef.current.start(undefined, start * (audioBpm / bpm));
+
+      requestWakeLock();
     } else {
         console.log("Player stopped");
       playerRef.current.stop();
+      
+      releaseWakeLock();
     }
   }, [triggerPlay]);
 
