@@ -39,7 +39,7 @@ export default function CombinedSelectors({
                             <SelectValue placeholder="Pick taal"/>
                         </SelectTrigger>
                         <SelectContent>
-                            {data[selectedInstrumentIndex]?.Taals.map((t, index) => 
+                            {data[selectedInstrumentIndex]?.Taals.map((t, index) =>
                                 <SelectItem key={t.Name} value={index}>{t.Name} ({t.Beats})</SelectItem>)}
                         </SelectContent>
                     </Select>
