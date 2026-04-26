@@ -238,6 +238,7 @@ export default function AudioPlayer({
 
     // BPM — recalculate lehra loop window and playback rate
     useEffect(() => {
+        Tone.Transport.bpm.value = bpm; // keep Transport in sync so "4n" intervals are correct
         if (!playerRef.current) return;
         try {
             const [startVal, endVal, audioBpmVal] = calculateTimings(bpm, beats, tempos);
@@ -279,13 +280,14 @@ export default function AudioPlayer({
                 } else {
                     metronomeRef.current?.start(time);
                 }
-            }, 60 / bpm);
+            }, "4n"); // quarter note — auto-adjusts when Transport.bpm changes
             Tone.Transport.start();
         } else {
             Tone.Transport.cancel();
             Tone.Transport.stop(); // reset position so next play always starts from 0
+            setCurrentBeat(0);
         }
-    }, [triggerPlay, bpm, beats]); // beats dep keeps modulo correct after taal change
+    }, [triggerPlay, bpm, beats]);
 
     return null;
 }
