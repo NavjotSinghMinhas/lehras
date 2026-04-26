@@ -38,7 +38,10 @@ export default function CombinedSelectors({
                         <SelectValue placeholder="Taal" />
                     </SelectTrigger>
                     <SelectContent>
-                        {data[selectedInstrumentIndex]?.Taals.map((t, index) => (
+                        {(data[selectedInstrumentIndex]?.Taals
+                            .map((t, index) => ({ t, index }))
+                            .sort((a, b) => a.t.Beats - b.t.Beats) ?? []
+                        ).map(({ t, index }) => (
                             <SelectItem key={index} value={String(index)}>
                                 {t.Name} <span className="text-muted-foreground">·{t.Beats}</span>
                             </SelectItem>
