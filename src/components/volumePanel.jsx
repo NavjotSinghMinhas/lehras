@@ -1,35 +1,42 @@
 import React from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Slider} from "@/components/ui/slider";
-import {Volume2} from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Volume1, Volume2, VolumeX } from "lucide-react";
 
-export default function VolumePanel({volumes, onVolumeChange}) {
-    const change = (key, val) => onVolumeChange({...volumes, [key]: val});
+const TRACKS = [
+    { key: 'lehra', label: 'Lehra' },
+    { key: 'tanpura', label: 'Tanpura' },
+    { key: 'metronome', label: 'Metronome' },
+];
+
+function VolumeIcon({ value }) {
+    if (value === 0) return <VolumeX className="w-3.5 h-3.5" />;
+    if (value < 0.5) return <Volume1 className="w-3.5 h-3.5" />;
+    return <Volume2 className="w-3.5 h-3.5" />;
+}
+
+export default function VolumePanel({ volumes, onVolumeChange }) {
+    const change = (key, val) => onVolumeChange({ ...volumes, [key]: val });
 
     return (
-        <Card className="border-0 rounded-2xl nm-card">
-            <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 nm-text text-base">
-                    <Volume2 className="w-4 h-4 nm-text"/>
-                    Mixer
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <div>
-                    <div className="text-[11px] nm-text/70 mb-1">Lehra</div>
-                    <Slider value={[volumes.lehra]} onValueChange={(v) => change('lehra', v[0])} max={1} step={0.05}/>
-                </div>
-                <div>
-                    <div className="text-[11px] nm-text/70 mb-1">Tanpura</div>
-                    <Slider value={[volumes.tanpura]} onValueChange={(v) => change('tanpura', v[0])} max={1}
-                            step={0.05}/>
-                </div>
-                <div>
-                    <div className="text-[11px] nm-text/70 mb-1">Metronome</div>
-                    <Slider value={[volumes.metronome]} onValueChange={(v) => change('metronome', v[0])} max={1}
-                            step={0.05}/>
-                </div>
-            </CardContent>
-        </Card>
+        <div className="bg-card border border-border rounded-2xl p-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Mixer</p>
+            <div className="space-y-4">
+                {TRACKS.map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-3">
+                        <span className="w-20 text-sm text-foreground shrink-0">{label}</span>
+                        <Slider
+                            value={[volumes[key]]}
+                            onValueChange={v => change(key, v[0])}
+                            max={1}
+                            step={0.05}
+                            className="flex-1"
+                        />
+                        <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
+                            <VolumeIcon value={volumes[key]} />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 }

@@ -1,51 +1,25 @@
-import React, {useMemo, useState} from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Button} from "@/components/ui/button";
-import {Slider} from "@/components/ui/slider";
-import {Switch} from "@/components/ui/switch";
-import {Minus, Music, Pause, Play, Plus, Radio} from "lucide-react";
+import { Minus, Music, Pause, Play, Plus, Sun, Moon } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
 import FrequencySelector from "./components/frequencySelector";
-import StatusPanel from "./components/statusPanel";
 import CombinedSelectors from "./components/combinedSelectors";
 import VolumePanel from "./components/volumePanel";
 import AudioPlayer from "./components/audioPlayer";
-import type {JsonData} from "./lib/dataType";
+import BeatVisualizer from "./components/beatVisualizer";
+import type { JsonData } from "./lib/dataType";
 import data from "@/assets/data_min.json";
 
-/* ---------- Utility functions ---------- */
-const hexToRgb = (hex: string) => {
-    const h = hex.replace("#", "");
-    const bigint = parseInt(h, 16);
-    return {r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255};
-};
-
-const rgbToHex = ({r, g, b}: { r: number; g: number; b: number }) => {
-    const toHex = (v: number) => v.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-};
-
-const mix = (c1: string, c2: string, t: number) => {
-    const a = hexToRgb(c1), b = hexToRgb(c2);
-    const r = Math.round(a.r + (b.r - a.r) * t);
-    const g = Math.round(a.g + (b.g - a.g) * t);
-    const b2 = Math.round(a.b + (b.b - a.b) * t);
-    return rgbToHex({r, g, b: b2});
-};
-
-/* ---------- Component ---------- */
 export default function TablaPractice() {
     const instruments = (data as JsonData).Instruments;
 
-    // Selection state
     const [selectedInstrumentIndex, setSelectedInstrumentIndex] = useState<number | null>(null);
     const [selectedTaalIndex, setSelectedTaalIndex] = useState<number | null>(null);
     const [selectedRaagIndex, setSelectedRaagIndex] = useState<number | null>(null);
 
-    // Sound state
-    const [frequency, setFrequency] = useState({note: "D", octave: 3, cents: 0});
-    const [volumes, setVolumes] = useState({lehra: 0.7, tanpura: 0.55, metronome: 0});
+    const [frequency, setFrequency] = useState({ note: "D", octave: 3, cents: 0 });
+    const [volumes, setVolumes] = useState({ lehra: 0.7, tanpura: 0.55, metronome: 0 });
     const [isPlaying, setIsPlaying] = useState(false);
     const [bpm, setBpm] = useState(75);
     const [currentBeat, setCurrentBeat] = useState(0);
@@ -55,33 +29,29 @@ export default function TablaPractice() {
     const [tempos, setTempos] = useState<number[]>([]);
     const [soundName, setSoundName] = useState("");
 
-    // Theme state
-    const [darkMode, setDarkMode] = useState(false);
-    const [darkIntensity, setDarkIntensity] = useState(60);
+    const [darkMode, setDarkMode] = useState(true);
+
+    useEffect(() => {
+        document.documentElement.classList.toggle("dark", darkMode);
+    }, [darkMode]);
+
+    const isReady = !!soundName;
 
     const togglePlay = () => {
-        if (!soundName) {
-            alert("Please select an instrument, taal, and raag first.");
-            return;
-        }
-
-        setIsPlaying((p) => !p)
+        if (!isReady) return;
+        setIsPlaying(p => !p);
     };
 
-    // Selection handlers
     const updateSelection = (instrument?: number, taal?: number, raag?: number) => {
         setIsPlaying(false);
-
         const instIdx = instrument ?? selectedInstrumentIndex;
         const taalIdx = instrument != null ? 0 : taal ?? selectedTaalIndex;
         const raagIdx = instrument != null || taal != null ? 0 : raag;
-
         if (instIdx === null) return;
-
         const inst = instruments[instIdx];
         const taalSel = inst.Taals[taalIdx ?? 0];
-        const raagSel = taalSel?.Raags[raagIdx ?? 0] ?? 0;
-
+        const raagSel = taalSel?.Raags[raagIdx ?? 0];
+        if (!raagSel) return;
         setSelectedInstrumentIndex(instIdx);
         setSelectedTaalIndex(taalIdx ?? 0);
         setSelectedRaagIndex(raagIdx ?? 0);
@@ -89,143 +59,144 @@ export default function TablaPractice() {
         setTempos(raagSel.Tempos);
         setMinTempo(raagSel.MinTempo);
         setMaxTempo(raagSel.MaxTempo);
-
-        if (bpm < raagSel.MinTempo) setBpm(raagSel.MinTempo);
-        else if (bpm > raagSel.MaxTempo) setBpm(raagSel.MaxTempo);
-
+        setBpm(prev => Math.max(raagSel.MinTempo, Math.min(raagSel.MaxTempo, prev)));
         setSoundName(raagSel.FileName);
-        console.log(raagSel.FileName);
     };
 
-    // Tap tempo
-    const handleTapTempo = () => {
+    const handleAutoTempo = () => {
         if (selectedInstrumentIndex == null || selectedTaalIndex == null || selectedRaagIndex == null) return;
-
-        const tempos = instruments[selectedInstrumentIndex]
-            .Taals[selectedTaalIndex]
-            .Raags[selectedRaagIndex]
-            .Tempos;
-
-        setBpm(tempos.find(t => t > bpm) ?? tempos[0]);
+        const tempoList = instruments[selectedInstrumentIndex].Taals[selectedTaalIndex].Raags[selectedRaagIndex].Tempos;
+        setBpm(tempoList.find(t => t > bpm) ?? tempoList[0]);
     };
 
-    const adjustBpm = (delta: number) => setBpm((prev) => Math.max(minTempo, Math.min(maxTempo, prev + delta)));
+    const adjustBpm = (delta: number) =>
+        setBpm(prev => Math.max(minTempo, Math.min(maxTempo, prev + delta)));
 
-    // Theme variables
-    const themeVars = useMemo(() => {
-        if (!darkMode) {
-            return {
-                "--bg": "#ffffff",
-                "--surface": "#f5f5f5",
-                "--text": "#1f2937",
-                "--shadow-out": "6px 6px 12px rgba(0,0,0,0.08), -6px -6px 12px rgba(255,255,255,0.9)",
-                justifyContent: "center"
-            } as React.CSSProperties;
-        }
-        const t = Math.min(1, Math.max(0, darkIntensity / 100));
-        return {
-            "--bg": mix("#0f1216", "#0b0d11", t),
-            "--surface": mix("#171a1f", "#1c2027", t),
-            "--text": mix("#e5e7eb", "#ffffff", t * 0.3),
-            "--shadow-out": `6px 6px 12px rgba(0,0,0,${0.55 + 0.25 * t}), -6px -6px 12px rgba(255,255,255,${0.04 + 0.04 * t})`,
-            "justify-content": "center"
-        } as React.CSSProperties;
-    }, [darkMode, darkIntensity]);
+    const selectedTaalName =
+        selectedInstrumentIndex != null && selectedTaalIndex != null
+            ? instruments[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Name
+            : null;
 
     return (
-        <div className="min-h-screen flex flex-col" data-theme={darkMode ? "dark" : "light"} style={themeVars}>
-            <style>{`
-        .nm-bg { background: var(--bg); }
-        .nm-surface { background: var(--surface); }
-        .nm-text { color: var(--text); }
-        .nm-card { background: var(--surface); box-shadow: var(--shadow-out); }
-        .nm-button { background: var(--surface); box-shadow: var(--shadow-out); color: var(--text); border: 0; }
-      `}</style>
-
+        <div className="min-h-screen bg-background text-foreground">
             {/* Header */}
-            <div className="px-3 sm:px-4 py-2 flex items-center justify-between nm-bg">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl nm-card flex items-center justify-center">
-                        <Music className="w-4 h-4 nm-text"/>
+            <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
+                        <Music className="w-3.5 h-3.5 text-zinc-950" />
                     </div>
-                    <span className="text-base sm:text-lg font-bold nm-text tracking-tight">Lehras</span>
+                    <span className="font-semibold tracking-tight text-foreground">Lehras</span>
                 </div>
+                <button
+                    onClick={() => setDarkMode(d => !d)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Toggle theme"
+                >
+                    {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+            </header>
 
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2">
-                        <span className="text-xs nm-text">Dark</span>
+            {/* Main */}
+            <main className="max-w-[440px] mx-auto px-4 pt-4 pb-10 space-y-3">
+
+                {/* Selections */}
+                <CombinedSelectors
+                    data={instruments}
+                    selectedInstrumentIndex={selectedInstrumentIndex}
+                    setSelectedInstrumentIndex={(idx: number) => updateSelection(idx)}
+                    selectedTaalIndex={selectedTaalIndex}
+                    setSelectedTaalIndex={(idx: number) => updateSelection(undefined, idx)}
+                    selectedRaagIndex={selectedRaagIndex}
+                    setSelectedRaagIndex={(idx: number) => updateSelection(undefined, undefined, idx)}
+                />
+
+                {/* Practice card */}
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
+
+                    {/* Beat visualizer */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                {selectedTaalName ?? "Taal"}
+                            </span>
+                            <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                                {currentBeat > 0 ? `${currentBeat} / ${beats}` : `${beats} beats`}
+                            </span>
+                        </div>
+                        <BeatVisualizer beats={beats} currentBeat={currentBeat} isPlaying={isPlaying} />
+                    </div>
+
+                    {/* BPM */}
+                    <div className="text-center select-none">
+                        <div className="text-6xl font-bold font-mono tracking-tighter text-foreground tabular-nums leading-none">
+                            {bpm}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-widest mt-1.5">
+                            beats per minute
+                        </div>
+                    </div>
+
+                    {/* Tempo slider */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => adjustBpm(-1)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0"
+                        >
+                            <Minus className="w-3.5 h-3.5" />
+                        </button>
                         <Slider
-                            value={[darkIntensity]}
-                            onValueChange={(v) => setDarkIntensity(v[0])}
-                            min={20}
-                            max={100}
+                            value={[bpm]}
+                            onValueChange={v => setBpm(v[0])}
+                            min={minTempo}
+                            max={maxTempo}
                             step={1}
-                            className="w-24"
-                            disabled={!darkMode}
+                            className="flex-1"
                         />
+                        <button
+                            onClick={() => adjustBpm(1)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs nm-text">Light</span>
-                        <Switch checked={darkMode} onCheckedChange={setDarkMode}/>
-                        <span className="text-xs nm-text">Dark</span>
+                    {/* Auto tempo + Play button */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleAutoTempo}
+                            disabled={!isReady}
+                            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide uppercase"
+                        >
+                            Auto
+                        </button>
+                        <button
+                            onClick={togglePlay}
+                            disabled={!isReady}
+                            className={[
+                                'flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all',
+                                !isReady
+                                    ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                                    : isPlaying
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20'
+                                        : 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm'
+                            ].join(' ')}
+                        >
+                            {isPlaying ? (
+                                <><Pause className="w-4 h-4" />Stop</>
+                            ) : (
+                                <><Play className="w-4 h-4" />Start Playing</>
+                            )}
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Main content */}
-            <div className="px-3 pb-2 nm-bg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FrequencySelector frequency={frequency} onFrequencyChange={setFrequency}/>
+                {/* Tuning */}
+                <FrequencySelector frequency={frequency} onFrequencyChange={setFrequency} />
 
-                    <Card className="border-0 rounded-2xl nm-card">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 nm-text text-base">
-                                <Radio className="w-4 h-4 nm-text"/>
-                                Tempo
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="flex items-center gap-2">
-                                <Button onClick={() => adjustBpm(-1)} className="h-9 w-9 rounded-full nm-button"
-                                        size="icon">
-                                    <Minus className="w-4 h-4"/>
-                                </Button>
-                                <Slider value={[bpm]} onValueChange={(v) => setBpm(v[0])} min={minTempo} max={maxTempo}
-                                        step={1}/>
-                                <Button onClick={() => adjustBpm(1)} className="h-9 w-9 rounded-full nm-button"
-                                        size="icon">
-                                    <Plus className="w-4 h-4"/>
-                                </Button>
-                            </div>
+                {/* Mixer */}
+                <VolumePanel volumes={volumes} onVolumeChange={setVolumes} />
 
-                            <StatusPanel bpm={bpm} onTap={handleTapTempo} currentBeat={currentBeat}/>
-
-                            <Button
-                                onClick={togglePlay}
-                                className={`flex-1 h-10 text-sm font-semibold rounded-xl ${
-                                    isPlaying ? "bg-red-500 hover:bg-red-600" : "bg-emerald-500 hover:bg-emerald-600"
-                                } text-white`}
-                            >
-                                {isPlaying ? <Pause className="w-4 h-4 mr-2"/> : <Play className="w-4 h-4 mr-2"/>}
-                                {isPlaying ? "Pause" : "Start"}
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    <CombinedSelectors
-                        data={instruments}
-                        selectedInstrumentIndex={selectedInstrumentIndex}
-                        setSelectedInstrumentIndex={(idx: number) => updateSelection(idx)}
-                        selectedTaalIndex={selectedTaalIndex}
-                        setSelectedTaalIndex={(idx: number) => updateSelection(undefined, idx)}
-                        selectedRaagIndex={selectedRaagIndex}
-                        setSelectedRaagIndex={(idx: number) => updateSelection(undefined, undefined, idx)}
-                    />
-
-                    <VolumePanel volumes={volumes} onVolumeChange={setVolumes}/>
-                </div>
-            </div>
+            </main>
 
             <AudioPlayer
                 triggerPlay={isPlaying}
@@ -237,11 +208,6 @@ export default function TablaPractice() {
                 frequency={frequency}
                 setCurrentBeat={setCurrentBeat}
             />
-
-            {/* Footer */}
-            {/*<div style={{position: "fixed", left: 0, right: 0, bottom: 0}} className="h-14 w-full nm-surface border-t border-black/10 flex items-center justify-center text-xs nm-text">*/}
-            {/*  Ad space*/}
-            {/*</div>*/}
         </div>
     );
 }

@@ -1,62 +1,66 @@
 import React from "react";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {Settings} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CombinedSelectors({
-                                              data,
-                                              selectedInstrumentIndex,
-                                              setSelectedInstrumentIndex,
-                                              selectedTaalIndex,
-                                              setSelectedTaalIndex,
-                                              selectedRaagIndex,
-                                              setSelectedRaagIndex
-                                          }) {
-
+    data,
+    selectedInstrumentIndex,
+    setSelectedInstrumentIndex,
+    selectedTaalIndex,
+    setSelectedTaalIndex,
+    selectedRaagIndex,
+    setSelectedRaagIndex
+}) {
     return (
-        <Card className="border-0 rounded-2xl nm-card">
-            <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 nm-text text-base">
-                    <Settings className="w-4 h-4 nm-text"/>
-                    Selections
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-                <div>
-                    <Select value={selectedInstrumentIndex ?? ""} onValueChange={setSelectedInstrumentIndex}>
-                        <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
-                            <SelectValue placeholder="Pick instrument"/>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {data.map((i, index) => <SelectItem key={i.Name} value={index}>{i.Name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Select</p>
 
-                <div>
-                    <Select value={selectedTaalIndex ?? ""} onValueChange={setSelectedTaalIndex}>
-                        <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
-                            <SelectValue placeholder="Pick taal"/>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {data[selectedInstrumentIndex]?.Taals.map((t, index) =>
-                                <SelectItem key={t.Name} value={index}>{t.Name} ({t.Beats})</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
+            <div className="grid grid-cols-2 gap-2">
+                <Select
+                    value={selectedInstrumentIndex != null ? String(selectedInstrumentIndex) : ""}
+                    onValueChange={v => setSelectedInstrumentIndex(Number(v))}
+                >
+                    <SelectTrigger className="w-full h-10 rounded-xl text-sm bg-muted border-0 focus-visible:ring-1">
+                        <SelectValue placeholder="Instrument" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {data.map((i, index) => (
+                            <SelectItem key={index} value={String(index)}>{i.Name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
 
-                <div>
-                    <Select value={selectedRaagIndex ?? ""} onValueChange={setSelectedRaagIndex}>
-                        <SelectTrigger className="h-9 rounded-xl nm-card nm-text text-sm border-0">
-                            <SelectValue placeholder="Pick raag"/>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {data[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Raags.map((r, index) =>
-                                <SelectItem key={r.Name} value={index}>{r.Name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
+                <Select
+                    value={selectedTaalIndex != null ? String(selectedTaalIndex) : ""}
+                    onValueChange={v => setSelectedTaalIndex(Number(v))}
+                    disabled={selectedInstrumentIndex == null}
+                >
+                    <SelectTrigger className="w-full h-10 rounded-xl text-sm bg-muted border-0 focus-visible:ring-1 disabled:opacity-40">
+                        <SelectValue placeholder="Taal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {data[selectedInstrumentIndex]?.Taals.map((t, index) => (
+                            <SelectItem key={index} value={String(index)}>
+                                {t.Name} <span className="text-muted-foreground">·{t.Beats}</span>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <Select
+                value={selectedRaagIndex != null ? String(selectedRaagIndex) : ""}
+                onValueChange={v => setSelectedRaagIndex(Number(v))}
+                disabled={selectedTaalIndex == null}
+            >
+                <SelectTrigger className="w-full h-10 rounded-xl text-sm bg-muted border-0 focus-visible:ring-1 disabled:opacity-40">
+                    <SelectValue placeholder="Raag" />
+                </SelectTrigger>
+                <SelectContent>
+                    {data[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Raags.map((r, index) => (
+                        <SelectItem key={index} value={String(index)}>{r.Name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
     );
 }
