@@ -59,7 +59,10 @@ export default function CombinedSelectors({
                     <SelectValue placeholder="Raag" />
                 </SelectTrigger>
                 <SelectContent>
-                    {data[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Raags.map((r, index) => (
+                    {(data[selectedInstrumentIndex]?.Taals[selectedTaalIndex]?.Raags
+                        .map((r, index) => ({ r, index }))
+                        .sort((a, b) => a.r.Name.localeCompare(b.r.Name)) ?? []
+                    ).map(({ r, index }) => (
                         <SelectItem key={index} value={String(index)}>{r.Name}</SelectItem>
                     ))}
                 </SelectContent>

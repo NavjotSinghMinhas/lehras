@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import { Minus, Music, Pause, Play, Plus, Sun, Moon } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -10,6 +10,8 @@ import AudioPlayer from "./components/audioPlayer";
 import BeatVisualizer from "./components/beatVisualizer";
 import type { JsonData } from "./lib/dataType";
 import data from "@/assets/data_min.json";
+
+const FOCUS_DELAY_MS = 60_000;
 
 export default function TablaPractice() {
     const instruments = (data as JsonData).Instruments;
@@ -28,13 +30,52 @@ export default function TablaPractice() {
     const [maxTempo, setMaxTempo] = useState(120);
     const [tempos, setTempos] = useState<number[]>([]);
     const [soundName, setSoundName] = useState("");
-
     const [darkMode, setDarkMode] = useState(true);
+
+    const [focusMode, setFocusMode] = useState(false);
+    const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         document.documentElement.classList.toggle("dark", darkMode);
     }, [darkMode]);
 
+    // ── Focus mode timer helpers ──────────────────────────────────────────
+    const clearFocusTimer = () => {
+        if (focusTimerRef.current !== null) {
+            clearTimeout(focusTimerRef.current);
+            focusTimerRef.current = null;
+        }
+    };
+
+    const startFocusTimer = () => {
+        clearFocusTimer();
+        focusTimerRef.current = setTimeout(() => setFocusMode(true), FOCUS_DELAY_MS);
+    };
+
+    // Resets the countdown on any user interaction while playing.
+    const resetFocusTimer = () => {
+        if (!isPlaying) return;
+        setFocusMode(false);
+        startFocusTimer();
+    };
+
+    // Start timer when playback begins; clear it when stopped.
+    useEffect(() => {
+        if (isPlaying) {
+            startFocusTimer();
+        } else {
+            clearFocusTimer();
+            setFocusMode(false);
+        }
+        return clearFocusTimer;
+    }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const exitFocusMode = () => {
+        setFocusMode(false);
+        if (isPlaying) startFocusTimer();
+    };
+
+    // ── Playback ──────────────────────────────────────────────────────────
     const isReady = !!soundName;
 
     const togglePlay = () => {
@@ -42,6 +83,8 @@ export default function TablaPractice() {
         setIsPlaying(p => !p);
     };
 
+    // ── Selection ─────────────────────────────────────────────────────────
+    // Changing selection stops playback, which clears the timer via the effect above.
     const updateSelection = (instrument?: number, taal?: number, raag?: number) => {
         setIsPlaying(false);
         const instIdx = instrument ?? selectedInstrumentIndex;
@@ -63,14 +106,34 @@ export default function TablaPractice() {
         setSoundName(raagSel.FileName);
     };
 
+    // ── Tempo controls ────────────────────────────────────────────────────
     const handleAutoTempo = () => {
         if (selectedInstrumentIndex == null || selectedTaalIndex == null || selectedRaagIndex == null) return;
         const tempoList = instruments[selectedInstrumentIndex].Taals[selectedTaalIndex].Raags[selectedRaagIndex].Tempos;
         setBpm(tempoList.find(t => t > bpm) ?? tempoList[0]);
+        resetFocusTimer();
     };
 
-    const adjustBpm = (delta: number) =>
+    const adjustBpm = (delta: number) => {
         setBpm(prev => Math.max(minTempo, Math.min(maxTempo, prev + delta)));
+        resetFocusTimer();
+    };
+
+    const handleBpmSlider = (v: number[]) => {
+        setBpm(v[0]);
+        resetFocusTimer();
+    };
+
+    // ── Other controls ────────────────────────────────────────────────────
+    const handleFrequencyChange = (f: typeof frequency) => {
+        setFrequency(f);
+        resetFocusTimer();
+    };
+
+    const handleVolumeChange = (v: typeof volumes) => {
+        setVolumes(v);
+        resetFocusTimer();
+    };
 
     const selectedTaalName =
         selectedInstrumentIndex != null && selectedTaalIndex != null
@@ -79,13 +142,55 @@ export default function TablaPractice() {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            {/* Header */}
+
+            {/* ── Focus mode overlay ──────────────────────────────────────── */}
+            {focusMode && (
+                <div
+                    className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-8 cursor-pointer select-none animate-in fade-in duration-500"
+                    onClick={exitFocusMode}
+                >
+                    {selectedTaalName && (
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-[0.2em]">
+                            {selectedTaalName}
+                        </p>
+                    )}
+
+                    <BeatVisualizer beats={beats} currentBeat={currentBeat} isPlaying={isPlaying} large />
+
+                    <div className="text-center">
+                        <div className="text-8xl font-bold font-mono tracking-tighter tabular-nums leading-none">
+                            {bpm}
+                        </div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-widest mt-2">
+                            bpm
+                        </div>
+                    </div>
+
+                    <div className="text-center">
+                        <div className="text-3xl font-bold font-mono leading-none">
+                            {frequency.note}
+                            <span className="text-xl font-normal text-muted-foreground">{frequency.octave}</span>
+                        </div>
+                        {frequency.cents !== 0 && (
+                            <div className="text-xs text-amber-500 font-mono mt-1">
+                                {frequency.cents > 0 ? '+' : ''}{frequency.cents}c
+                            </div>
+                        )}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground/40 uppercase tracking-widest absolute bottom-10">
+                        tap to continue
+                    </p>
+                </div>
+            )}
+
+            {/* ── Header ─────────────────────────────────────────────────── */}
             <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
                         <Music className="w-3.5 h-3.5 text-zinc-950" />
                     </div>
-                    <span className="font-semibold tracking-tight text-foreground">Lehras</span>
+                    <span className="font-semibold tracking-tight">Lehras</span>
                 </div>
                 <button
                     onClick={() => setDarkMode(d => !d)}
@@ -96,10 +201,9 @@ export default function TablaPractice() {
                 </button>
             </header>
 
-            {/* Main */}
+            {/* ── Main ───────────────────────────────────────────────────── */}
             <main className="max-w-[440px] mx-auto px-4 pt-4 pb-10 space-y-3">
 
-                {/* Selections */}
                 <CombinedSelectors
                     data={instruments}
                     selectedInstrumentIndex={selectedInstrumentIndex}
@@ -110,7 +214,6 @@ export default function TablaPractice() {
                     setSelectedRaagIndex={(idx: number) => updateSelection(undefined, undefined, idx)}
                 />
 
-                {/* Practice card */}
                 <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
 
                     {/* Beat visualizer */}
@@ -128,7 +231,7 @@ export default function TablaPractice() {
 
                     {/* BPM */}
                     <div className="text-center select-none">
-                        <div className="text-6xl font-bold font-mono tracking-tighter text-foreground tabular-nums leading-none">
+                        <div className="text-6xl font-bold font-mono tracking-tighter tabular-nums leading-none">
                             {bpm}
                         </div>
                         <div className="text-[11px] text-muted-foreground uppercase tracking-widest mt-1.5">
@@ -146,7 +249,7 @@ export default function TablaPractice() {
                         </button>
                         <Slider
                             value={[bpm]}
-                            onValueChange={v => setBpm(v[0])}
+                            onValueChange={handleBpmSlider}
                             min={minTempo}
                             max={maxTempo}
                             step={1}
@@ -160,7 +263,7 @@ export default function TablaPractice() {
                         </button>
                     </div>
 
-                    {/* Auto tempo + Play button */}
+                    {/* Auto + play */}
                     <div className="flex gap-2">
                         <button
                             onClick={handleAutoTempo}
@@ -181,20 +284,16 @@ export default function TablaPractice() {
                                         : 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm'
                             ].join(' ')}
                         >
-                            {isPlaying ? (
-                                <><Pause className="w-4 h-4" />Stop</>
-                            ) : (
-                                <><Play className="w-4 h-4" />Start Playing</>
-                            )}
+                            {isPlaying
+                                ? <><Pause className="w-4 h-4" />Stop</>
+                                : <><Play className="w-4 h-4" />Start Playing</>}
                         </button>
                     </div>
                 </div>
 
-                {/* Tuning */}
-                <FrequencySelector frequency={frequency} onFrequencyChange={setFrequency} />
+                <FrequencySelector frequency={frequency} onFrequencyChange={handleFrequencyChange} />
 
-                {/* Mixer */}
-                <VolumePanel volumes={volumes} onVolumeChange={setVolumes} />
+                <VolumePanel volumes={volumes} onVolumeChange={handleVolumeChange} />
 
             </main>
 
