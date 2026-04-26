@@ -256,6 +256,17 @@ export default function AudioPlayer({
             playerRef.current.loopStart    = startVal;
             playerRef.current.loopEnd      = endVal;
             playerRef.current.playbackRate = bpm / audioBpmVal;
+            if (triggerPlay) {
+                // Seek to the current beat in the new section.
+                // GrainPlayer's start() offset uses the same scaling as the play/stop effect:
+                //   offset = bufferPosition * (audioBpmVal / bpm)
+                // Each beat occupies (60/audioBpmVal)s in the buffer, so beat N starts at
+                //   startVal + (N-1) * (60/audioBpmVal) in the buffer.
+                const beatsElapsed = Math.max(0, beatCountRef.current - 1);
+                const bufferPos = startVal + beatsElapsed * (60 / audioBpmVal);
+                playerRef.current.stop();
+                playerRef.current.start(undefined, bufferPos * (audioBpmVal / bpm));
+            }
         } catch {
             // player not yet ready
         }
