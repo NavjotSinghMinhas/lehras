@@ -268,8 +268,8 @@ export default function AudioPlayer({
         if (triggerPlay) {
             if (!playerRef.current) return;
             beatCountRef.current = 0;
-            setCurrentBeat(0);
             Tone.Transport.cancel();
+            Tone.Transport.stop(); // reset position to 0 so first tick fires immediately
             Tone.Transport.scheduleRepeat((time) => {
                 beatCountRef.current = (beatCountRef.current % beats) + 1;
                 setCurrentBeat(beatCountRef.current);
@@ -283,7 +283,7 @@ export default function AudioPlayer({
             Tone.Transport.start();
         } else {
             Tone.Transport.cancel();
-            setCurrentBeat(0);
+            Tone.Transport.stop(); // reset position so next play always starts from 0
         }
     }, [triggerPlay, bpm, beats]); // beats dep keeps modulo correct after taal change
 
