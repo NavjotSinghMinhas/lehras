@@ -247,25 +247,41 @@ export default function AudioPlayer({
 
     // BPM — recalculate lehra loop window and playback rate
     useEffect(() => {
-        if (clockRef.current) clockRef.current.frequency.value = bpm / 60;
         if (!playerRef.current) return;
         try {
             const [startVal, endVal, audioBpmVal] = calculateTimings(bpm, beats, tempos);
+            const prevStart = startRef.current;
             startRef.current    = startVal;
             audioBpmRef.current = audioBpmVal;
             playerRef.current.loopStart    = startVal;
             playerRef.current.loopEnd      = endVal;
             playerRef.current.playbackRate = bpm / audioBpmVal;
+
             if (triggerPlay) {
-                // Seek to the current beat in the new section.
-                // GrainPlayer's start() offset uses the same scaling as the play/stop effect:
-                //   offset = bufferPosition * (audioBpmVal / bpm)
-                // Each beat occupies (60/audioBpmVal)s in the buffer, so beat N starts at
-                //   startVal + (N-1) * (60/audioBpmVal) in the buffer.
-                const beatsElapsed = Math.max(0, beatCountRef.current - 1);
-                const bufferPos = startVal + beatsElapsed * (60 / audioBpmVal);
-                playerRef.current.stop();
-                playerRef.current.start(undefined, bufferPos * (audioBpmVal / bpm));
+                // Only stop+seek when the loop section itself changes (different audioBpm tier).
+                // Same-section BPM changes only update playbackRate; audio stays mid-loop.
+                if (startVal !== prevStart) {
+                    const beatsElapsed = Math.max(0, beatCountRef.current - 1);
+                    const bufferPos = startVal + beatsElapsed * (60 / audioBpmVal);
+                    playerRef.current.stop();
+                    playerRef.current.start(undefined, bufferPos * (audioBpmVal / bpm));
+                }
+
+                // Recreate the clock so the next tick is exactly one new period from now.
+                // Reusing frequency.value keeps the stale already-scheduled tick, which fires
+                // based on the old period and bumps beatCountRef one beat too early (off-by-1 sam).
+                const newPeriod = 60 / bpm;
+                disposeClock();
+                clockRef.current = new Tone.Clock((time) => {
+                    beatCountRef.current = (beatCountRef.current % beats) + 1;
+                    setCurrentBeat(beatCountRef.current);
+                    if (beatCountRef.current === 1) {
+                        metronomeUpRef.current?.start(time);
+                    } else {
+                        metronomeRef.current?.start(time);
+                    }
+                }, bpm / 60);
+                clockRef.current.start(Tone.now() + newPeriod);
             }
         } catch {
             // player not yet ready
