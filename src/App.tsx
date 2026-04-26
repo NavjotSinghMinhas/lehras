@@ -301,6 +301,7 @@ export default function TablaPractice() {
                 triggerPlay={isPlaying}
                 volume={volumes.lehra}
                 tanpuraVolume={volumes.tanpura}
+                metronomeVolume={volumes.metronome}
                 beats={beats}
                 tempos={tempos}
                 fileName={soundName}

@@ -17,14 +17,18 @@ export default function AudioPlayer({
     tempos,
     volume,
     tanpuraVolume,
+    metronomeVolume,
     bpm,
     frequency,
     setCurrentBeat,
 }) {
-    const playerRef   = useRef(null);
-    const shiftRef    = useRef(null);
-    const tanpuraRef  = useRef(null);
-    const wakeLockRef = useRef(null);
+    const playerRef       = useRef(null);
+    const shiftRef        = useRef(null);
+    const tanpuraRef      = useRef(null);
+    const metronomeRef    = useRef(null); // regular beat click
+    const metronomeUpRef  = useRef(null); // sam (beat 1) click
+    const wakeLockRef     = useRef(null);
+    const beatCountRef    = useRef(0);    // tracks beat inside Transport callback
 
     // Audio logic only — refs avoid pointless re-renders.
     const startRef    = useRef(0);
@@ -49,6 +53,17 @@ export default function AudioPlayer({
             tanpuraRef.current.stop();
             tanpuraRef.current.dispose();
             tanpuraRef.current = null;
+        }
+    };
+
+    const disposeMetronome = () => {
+        if (metronomeRef.current) {
+            metronomeRef.current.dispose();
+            metronomeRef.current = null;
+        }
+        if (metronomeUpRef.current) {
+            metronomeUpRef.current.dispose();
+            metronomeUpRef.current = null;
         }
     };
 
@@ -102,6 +117,7 @@ export default function AudioPlayer({
     useEffect(() => () => {
         disposePlayer();
         disposeTanpura();
+        disposeMetronome();
         Tone.Transport.cancel();
         releaseWakeLock();
     }, []);
@@ -124,6 +140,30 @@ export default function AudioPlayer({
             disposeTanpura();
         };
     }, []); // intentional: fixed file, load once
+
+    // Load metronome clicks once on mount
+    useEffect(() => {
+        const signal = { cancelled: false };
+        (async () => {
+            const [regularPath, samPath] = await Promise.all([
+                loadSound("Metronome.aac"),
+                loadSound("MetronomeUp.aac"),
+            ]);
+            if (signal.cancelled) return;
+            if (regularPath) {
+                metronomeRef.current = new Tone.Player({ url: regularPath }).toDestination();
+                metronomeRef.current.volume.value = Tone.gainToDb(metronomeVolume);
+            }
+            if (samPath) {
+                metronomeUpRef.current = new Tone.Player({ url: samPath }).toDestination();
+                metronomeUpRef.current.volume.value = Tone.gainToDb(metronomeVolume);
+            }
+        })();
+        return () => {
+            signal.cancelled = true;
+            disposeMetronome();
+        };
+    }, []); // intentional: fixed files, load once
 
     // Rebuild lehra player when audio file changes
     useEffect(() => {
@@ -162,7 +202,7 @@ export default function AudioPlayer({
         };
     }, [fileName]); // intentional: only rebuild when the file itself changes
 
-    // Play / stop — both lehra and tanpura together
+    // Play / stop — lehra and tanpura together; metronome is driven by Transport
     useEffect(() => {
         if (triggerPlay) {
             if (playerRef.current)
@@ -188,6 +228,13 @@ export default function AudioPlayer({
         if (tanpuraRef.current)
             tanpuraRef.current.volume.value = Tone.gainToDb(tanpuraVolume);
     }, [tanpuraVolume]);
+
+    // Metronome volume — applies to both click sounds
+    useEffect(() => {
+        const db = Tone.gainToDb(metronomeVolume);
+        if (metronomeRef.current)    metronomeRef.current.volume.value    = db;
+        if (metronomeUpRef.current)  metronomeUpRef.current.volume.value  = db;
+    }, [metronomeVolume]);
 
     // BPM — recalculate lehra loop window and playback rate
     useEffect(() => {
@@ -216,21 +263,29 @@ export default function AudioPlayer({
             tanpuraRef.current.detune = detune;
     }, [frequency.note, frequency.octave, frequency.cents]);
 
-    // Beat counter
+    // Beat counter + metronome clicks
     useEffect(() => {
         if (triggerPlay) {
             if (!playerRef.current) return;
+            beatCountRef.current = 0;
             setCurrentBeat(0);
             Tone.Transport.cancel();
-            Tone.Transport.scheduleRepeat(() => {
-                setCurrentBeat(prev => (prev % beats) + 1);
+            Tone.Transport.scheduleRepeat((time) => {
+                beatCountRef.current = (beatCountRef.current % beats) + 1;
+                setCurrentBeat(beatCountRef.current);
+                // Sam (beat 1) gets the accented click, all others get the regular click.
+                if (beatCountRef.current === 1) {
+                    metronomeUpRef.current?.start(time);
+                } else {
+                    metronomeRef.current?.start(time);
+                }
             }, 60 / bpm);
             Tone.Transport.start();
         } else {
             Tone.Transport.cancel();
             setCurrentBeat(0);
         }
-    }, [triggerPlay, bpm, beats]); // beats added so modulo stays correct after taal change
+    }, [triggerPlay, bpm, beats]); // beats dep keeps modulo correct after taal change
 
     return null;
 }
