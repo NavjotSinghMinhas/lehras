@@ -1,9 +1,14 @@
+const SOUND_MODULES = import.meta.glob([
+    '../assets/sounds/**/*.aac',
+    '../assets/sounds/**/*.m4a',
+    '../assets/sounds/**/*.ogg',
+    '../assets/sounds/**/*.wav',
+]);
+
 export const loadSound = async (name) => {
-    const modules = import.meta.glob(['../assets/sounds/**/*.aac', '../assets/sounds/**/*.wav', '../assets/sounds/**/*.ogg']);
-    for (const path in modules) {
-        const fileName = path.split('/').pop();
-        if (fileName === name) {
-            const mod = await modules[path]();
+    for (const path in SOUND_MODULES) {
+        if (path.split('/').pop() === name) {
+            const mod = await SOUND_MODULES[path]();
             return mod.default;
         }
     }

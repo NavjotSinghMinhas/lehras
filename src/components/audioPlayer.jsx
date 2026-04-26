@@ -1,86 +1,63 @@
-import {useEffect, useRef, useState} from "react";
+import { useEffect, useRef } from "react";
 import * as Tone from "tone";
-import {loadSound} from "./../lib/sounds";
+import { loadSound } from "../lib/sounds";
+
+const NOTES_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const D3_INDEX = NOTES_ORDER.indexOf("D");
+
+const roundDown = (num, decimals = 2) => {
+    const factor = Math.pow(10, decimals);
+    return Math.floor(num * factor) / factor;
+};
 
 export default function AudioPlayer({
-                                        fileName,
-                                        triggerPlay,
-                                        beats,
-                                        tempos,
-                                        volume,
-                                        bpm,
-                                        frequency,
-                                        setCurrentBeat
-                                    }) {
-    const NOTES_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
-    const playerRef = useRef(null);
-    const shiftRef = useRef(null);
+    fileName,
+    triggerPlay,
+    beats,
+    tempos,
+    volume,
+    tanpuraVolume,
+    bpm,
+    frequency,
+    setCurrentBeat,
+}) {
+    const playerRef   = useRef(null);
+    const shiftRef    = useRef(null);
+    const tanpuraRef  = useRef(null);
     const wakeLockRef = useRef(null);
 
-    // Compute loop timings only when bpm/tempos/beats change
-    const [start, setStart] = useState(0);
-    const [end, setEnd] = useState(0);
-    const [audioBpm, setAudioBpm] = useState(0);
+    // Audio logic only — refs avoid pointless re-renders.
+    const startRef    = useRef(0);
+    const audioBpmRef = useRef(0);
 
-    const roundDown = (num, decimals = 2) => {
-        const factor = Math.pow(10, decimals);
-        return (Math.floor(num * factor) / factor).toFixed(decimals);
-    };
+    // ── Helpers ───────────────────────────────────────────────────────────
 
-    const calculateStartEndTimings = () => {
-        if (!fileName) return [0, 0, 0];
-
-        console.log("Calculating start, end timings for bpm:", bpm, "audio:", fileName);
-        let startVal = 0;
-        let endVal = 0;
-        let audioBpmVal = 0;
-
-        for (let i = 0; i < tempos.length; i++) {
-            const segment = Number(((60 / tempos[i]) * beats).toFixed(2));
-            audioBpmVal = tempos[i];
-            if (bpm <= tempos[i]) {
-                startVal = endVal;
-                endVal += segment;
-                console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-                return [roundDown(startVal),
-                    endVal > playerRef.current?.buffer.duration ?? endVal
-                        ? playerRef.current.buffer.duration
-                        : roundDown(endVal), audioBpmVal];
-            }
-            startVal = endVal;
-            endVal += segment;
-        }
-        console.log("Found time for bpm:", bpm, "          start:", startVal, "end", endVal);
-        return [roundDown(startVal),
-            endVal > playerRef.current?.buffer.duration ?? endVal
-                ? playerRef.current.buffer.duration
-                : roundDown(endVal), audioBpmVal];
-    }
-
-    // Helper to dispose safely
     const disposePlayer = () => {
         if (playerRef.current) {
             playerRef.current.stop();
             playerRef.current.dispose();
             playerRef.current = null;
-            console.log("Player disposed");
         }
         if (shiftRef.current) {
             shiftRef.current.dispose();
             shiftRef.current = null;
-            console.log("Shift disposed");
+        }
+    };
+
+    const disposeTanpura = () => {
+        if (tanpuraRef.current) {
+            tanpuraRef.current.stop();
+            tanpuraRef.current.dispose();
+            tanpuraRef.current = null;
         }
     };
 
     const requestWakeLock = async () => {
         try {
-            if ('wakeLock' in navigator) {
-                wakeLockRef.current = await navigator.wakeLock.request('screen');
-                console.log('Wake Lock acquired');
-            }
-        } catch (err) {
-            console.error('Wake Lock error:', err);
+            if ("wakeLock" in navigator)
+                wakeLockRef.current = await navigator.wakeLock.request("screen");
+        } catch {
+            // not available or denied — ignore
         }
     };
 
@@ -88,168 +65,161 @@ export default function AudioPlayer({
         if (wakeLockRef.current) {
             await wakeLockRef.current.release();
             wakeLockRef.current = null;
-            console.log('Wake Lock released');
         }
     };
 
-    async function enterFullscreen() {
-        try {
-            const elem = document.documentElement; // or specific element
+    const getDetune = (note, octave, cents) =>
+        ((octave - 3) * 12 + (NOTES_ORDER.indexOf(note) - D3_INDEX)) * 100 + cents;
 
-            if (elem.requestFullscreen) {
-                await elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) { // Safari
-                await elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) { // IE11
-                await elem.msRequestFullscreen();
+    const calculateTimings = (currentBpm, currentBeats, currentTempos) => {
+        let startVal = 0;
+        let endVal = 0;
+        let audioBpmVal = 0;
+        const bufferDuration = playerRef.current?.buffer?.duration;
+
+        for (const tempo of currentTempos) {
+            const segment = Number(((60 / tempo) * currentBeats).toFixed(2));
+            audioBpmVal = tempo;
+            startVal = endVal;
+            endVal += segment;
+            if (currentBpm <= tempo) {
+                const clampedEnd = bufferDuration != null && endVal > bufferDuration
+                    ? bufferDuration
+                    : roundDown(endVal);
+                return [roundDown(startVal), clampedEnd, audioBpmVal];
             }
-        } catch (err) {
-            console.error('Fullscreen error:', err);
         }
-    }
 
-    function exitFullscreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-    }
-
-    const initPlayer = async () => {
-        const soundPath = await loadSound(fileName);
-        if (!soundPath) return;
-
-        disposePlayer();
-        console.log("player init called for", fileName);
-        // Calculate timings
-        let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
-        setStart(startVal);
-        setEnd(endVal);
-        setAudioBpm(audioBpmVal);
-
-        playerRef.current = new Tone.GrainPlayer({
-            url: soundPath,
-            loop: true,
-            loopStart: startVal,
-            loopEnd: endVal,
-        }).toDestination();
-
-        await Tone.start();
-
-        shiftRef.current = new Tone.PitchShift(0).toDestination();
-        playerRef.current.detune = frequency.cents;
-        playerRef.current.connect(shiftRef.current);
-
-        playerRef.current.volume.value = Tone.gainToDb(volume);
-        playerRef.current.playbackRate = bpm / audioBpmVal;
-        console.log("player initialized");
+        const clampedEnd = bufferDuration != null && endVal > bufferDuration
+            ? bufferDuration
+            : roundDown(endVal);
+        return [roundDown(startVal), clampedEnd, audioBpmVal];
     };
 
+    // ── Effects ───────────────────────────────────────────────────────────
 
-    /************* Effects *************/
+    // Cleanup on unmount
+    useEffect(() => () => {
+        disposePlayer();
+        disposeTanpura();
+        Tone.Transport.cancel();
+        releaseWakeLock();
+    }, []);
 
-    // Initialize new player when fileName changes
+    // Load tanpura once on mount — fixed file, never needs rebuilding
+    useEffect(() => {
+        const signal = { cancelled: false };
+        (async () => {
+            const soundPath = await loadSound("tanpura_02.wav");
+            if (signal.cancelled || !soundPath) return;
+            tanpuraRef.current = new Tone.GrainPlayer({
+                url: soundPath,
+                loop: true,
+            }).toDestination();
+            tanpuraRef.current.detune = getDetune(frequency.note, frequency.octave, frequency.cents);
+            tanpuraRef.current.volume.value = Tone.gainToDb(tanpuraVolume);
+        })();
+        return () => {
+            signal.cancelled = true;
+            disposeTanpura();
+        };
+    }, []); // intentional: fixed file, load once
+
+    // Rebuild lehra player when audio file changes
     useEffect(() => {
         if (!fileName) return;
+        const signal = { cancelled: false };
 
-        let isMounted = true;
+        (async () => {
+            const soundPath = await loadSound(fileName);
+            if (signal.cancelled || !soundPath) return;
 
-        const init = async () => {
-            if (!isMounted) return;
-            await initPlayer();
+            disposePlayer();
+
+            const [startVal, , audioBpmVal] = calculateTimings(bpm, beats, tempos);
+            startRef.current    = startVal;
+            audioBpmRef.current = audioBpmVal;
+
+            playerRef.current = new Tone.GrainPlayer({
+                url: soundPath,
+                loop: true,
+                loopStart: startVal,
+                loopEnd: calculateTimings(bpm, beats, tempos)[1],
+            }).toDestination();
+
+            await Tone.start();
+
+            shiftRef.current = new Tone.PitchShift(0).toDestination();
+            playerRef.current.connect(shiftRef.current);
+            playerRef.current.detune = getDetune(frequency.note, frequency.octave, frequency.cents);
+            playerRef.current.volume.value = Tone.gainToDb(volume);
+            playerRef.current.playbackRate = bpm / audioBpmVal;
+        })();
+
+        return () => {
+            signal.cancelled = true;
+            disposePlayer();
         };
+    }, [fileName]); // intentional: only rebuild when the file itself changes
 
-        init();
-    }, [fileName]); // only rebuild when file changes
-
-    // Handle play/stop
+    // Play / stop — both lehra and tanpura together
     useEffect(() => {
-        if (!playerRef.current) {
-            return;
-        }
-
         if (triggerPlay) {
-            console.log("Player played with tempos:", tempos, " at start", start, "and end", end, "            Play? ", triggerPlay);
-            playerRef.current.start(undefined, start * (audioBpm / bpm));
-
+            if (playerRef.current)
+                playerRef.current.start(undefined, startRef.current * (audioBpmRef.current / bpm));
+            if (tanpuraRef.current)
+                tanpuraRef.current.start();
             requestWakeLock();
         } else {
-            console.log("Player stopped");
-            playerRef.current.stop();
-
+            if (playerRef.current) playerRef.current.stop();
+            if (tanpuraRef.current) tanpuraRef.current.stop();
             releaseWakeLock();
         }
-    }, [triggerPlay]);
+    }, [triggerPlay]); // intentional: only react to explicit play/stop
 
-    // Handle volume change
+    // Lehra volume
     useEffect(() => {
-        if (playerRef.current) {
+        if (playerRef.current)
             playerRef.current.volume.value = Tone.gainToDb(volume);
-        }
     }, [volume]);
 
-    // Handle bpm changes (update loop + playback rate)
+    // Tanpura volume
+    useEffect(() => {
+        if (tanpuraRef.current)
+            tanpuraRef.current.volume.value = Tone.gainToDb(tanpuraVolume);
+    }, [tanpuraVolume]);
+
+    // BPM — recalculate lehra loop window and playback rate
     useEffect(() => {
         if (!playerRef.current) return;
-
         try {
-            // Recalculate timings
-            let [startVal, endVal, audioBpmVal] = calculateStartEndTimings();
-            setStart(startVal);
-            setEnd(endVal);
-            setAudioBpm(audioBpmVal);
-
-            console.log("bpm change entered bpm:", bpm, "file:", fileName, "start:", startVal, "end:", endVal, "audioBpm:", audioBpmVal);
-
+            const [startVal, endVal, audioBpmVal] = calculateTimings(bpm, beats, tempos);
+            startRef.current    = startVal;
+            audioBpmRef.current = audioBpmVal;
             playerRef.current.stop();
+            playerRef.current.loopStart    = startVal;
+            playerRef.current.loopEnd      = endVal;
             playerRef.current.playbackRate = bpm / audioBpmVal;
-            playerRef.current.loopStart = startVal;
-            playerRef.current.loopEnd = endVal;
-            console.log("playback rate set to ", bpm / audioBpmVal);
-
-            if (triggerPlay) {
+            if (triggerPlay)
                 playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
-                console.log("player started after bpm change       ", startVal * (audioBpmVal / bpm), " pitch", shiftRef.current.pitch);
-            }
-            console.log("bpm change handled");
-        } catch (error) {
-            console.error("Error handling bpm change:", error);
+        } catch {
+            // player not yet ready
         }
-    }, [bpm]);
+    }, [bpm]); // intentional: loop recalculation only needed on bpm change
 
-    const getCentsFromNote = (note) => {
-        const newIndex = NOTES_ORDER.indexOf(frequency.note);
-        const previousIndex = NOTES_ORDER.indexOf('D'); // Assuming initial note is D
-
-        // Assuming initial octave is 3
-        return ((frequency.octave - 3) * 12 + (newIndex - previousIndex)) * 100;
-    }
-
-    // Handle note shift changes
+    // Pitch — applies to both lehra and tanpura
     useEffect(() => {
-        if (shiftRef.current) {
-            playerRef.current.detune = getCentsFromNote(frequency.note);
-            console.log("Note shift changed to ", playerRef.current.detune);
-        }
-    }, [frequency.note]);
+        const detune = getDetune(frequency.note, frequency.octave, frequency.cents);
+        if (playerRef.current && shiftRef.current)
+            playerRef.current.detune = detune;
+        if (tanpuraRef.current)
+            tanpuraRef.current.detune = detune;
+    }, [frequency.note, frequency.octave, frequency.cents]);
 
-    // Handle pitch shift changes
+    // Beat counter
     useEffect(() => {
-        if (shiftRef.current) {
-            playerRef.current.detune = getCentsFromNote(frequency.note) + frequency.cents;
-            console.log("Pitch shift changed to ", frequency.cents);
-        }
-    }, [frequency.cents]);
-
-    // Handle beat changes
-    useEffect(() => {
-        if (!playerRef.current) return;
-
         if (triggerPlay) {
-            console.log("Starting beats timer:        new bpm: ", bpm, "file:", fileName);
+            if (!playerRef.current) return;
             setCurrentBeat(0);
             Tone.Transport.cancel();
             Tone.Transport.scheduleRepeat(() => {
@@ -257,10 +227,10 @@ export default function AudioPlayer({
             }, 60 / bpm);
             Tone.Transport.start();
         } else {
-            console.log("Stopping beats timer:        new bpm: ", bpm, "file:", fileName);
             Tone.Transport.cancel();
+            setCurrentBeat(0);
         }
-    }, [triggerPlay, bpm]);
+    }, [triggerPlay, bpm, beats]); // beats added so modulo stays correct after taal change
 
     return null;
 }

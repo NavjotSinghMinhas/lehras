@@ -21,7 +21,7 @@ export default function TablaPractice() {
     const [selectedRaagIndex, setSelectedRaagIndex] = useState<number | null>(null);
 
     const [frequency, setFrequency] = useState({ note: "D", octave: 3, cents: 0 });
-    const [volumes, setVolumes] = useState({ lehra: 0.7, tanpura: 0.55, metronome: 0 });
+    const [volumes, setVolumes] = useState({ lehra: 0.7, tanpura: 0, metronome: 0 });
     const [isPlaying, setIsPlaying] = useState(false);
     const [bpm, setBpm] = useState(75);
     const [currentBeat, setCurrentBeat] = useState(0);
@@ -300,6 +300,7 @@ export default function TablaPractice() {
             <AudioPlayer
                 triggerPlay={isPlaying}
                 volume={volumes.lehra}
+                tanpuraVolume={volumes.tanpura}
                 beats={beats}
                 tempos={tempos}
                 fileName={soundName}
