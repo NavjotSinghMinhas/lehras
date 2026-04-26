@@ -27,8 +27,9 @@ export default function AudioPlayer({
     const tanpuraRef      = useRef(null);
     const metronomeRef    = useRef(null); // regular beat click
     const metronomeUpRef  = useRef(null); // sam (beat 1) click
+    const clockRef        = useRef(null); // beat clock
     const wakeLockRef     = useRef(null);
-    const beatCountRef    = useRef(0);    // tracks beat inside Transport callback
+    const beatCountRef    = useRef(0);    // tracks beat inside clock callback
 
     // Audio logic only — refs avoid pointless re-renders.
     const startRef    = useRef(0);
@@ -64,6 +65,14 @@ export default function AudioPlayer({
         if (metronomeUpRef.current) {
             metronomeUpRef.current.dispose();
             metronomeUpRef.current = null;
+        }
+    };
+
+    const disposeClock = () => {
+        if (clockRef.current) {
+            clockRef.current.stop();
+            clockRef.current.dispose();
+            clockRef.current = null;
         }
     };
 
@@ -118,7 +127,7 @@ export default function AudioPlayer({
         disposePlayer();
         disposeTanpura();
         disposeMetronome();
-        Tone.Transport.cancel();
+        disposeClock();
         releaseWakeLock();
     }, []);
 
@@ -238,22 +247,19 @@ export default function AudioPlayer({
 
     // BPM — recalculate lehra loop window and playback rate
     useEffect(() => {
-        Tone.Transport.bpm.value = bpm; // keep Transport in sync so "4n" intervals are correct
+        if (clockRef.current) clockRef.current.frequency.value = bpm / 60;
         if (!playerRef.current) return;
         try {
             const [startVal, endVal, audioBpmVal] = calculateTimings(bpm, beats, tempos);
             startRef.current    = startVal;
             audioBpmRef.current = audioBpmVal;
-            playerRef.current.stop();
             playerRef.current.loopStart    = startVal;
             playerRef.current.loopEnd      = endVal;
             playerRef.current.playbackRate = bpm / audioBpmVal;
-            if (triggerPlay)
-                playerRef.current.start(undefined, startVal * (audioBpmVal / bpm));
         } catch {
             // player not yet ready
         }
-    }, [bpm]); // intentional: loop recalculation only needed on bpm change
+    }, [bpm]);
 
     // Pitch — applies to both lehra and tanpura
     useEffect(() => {
@@ -264,30 +270,29 @@ export default function AudioPlayer({
             tanpuraRef.current.detune = detune;
     }, [frequency.note, frequency.octave, frequency.cents]);
 
-    // Beat counter + metronome clicks
+    // Beat counter + metronome clicks — driven by a Tone.Clock (not Transport)
+    // Clock.frequency.value = bpm/60 Hz; updating it in-place avoids stale automation
+    // accumulation that caused double-fire bugs with Transport.bpm.value.
     useEffect(() => {
         if (triggerPlay) {
             if (!playerRef.current) return;
             beatCountRef.current = 0;
-            Tone.Transport.cancel();
-            Tone.Transport.stop(); // reset position to 0 so first tick fires immediately
-            Tone.Transport.scheduleRepeat((time) => {
+            disposeClock();
+            clockRef.current = new Tone.Clock((time) => {
                 beatCountRef.current = (beatCountRef.current % beats) + 1;
                 setCurrentBeat(beatCountRef.current);
-                // Sam (beat 1) gets the accented click, all others get the regular click.
                 if (beatCountRef.current === 1) {
                     metronomeUpRef.current?.start(time);
                 } else {
                     metronomeRef.current?.start(time);
                 }
-            }, "4n"); // quarter note — auto-adjusts when Transport.bpm changes
-            Tone.Transport.start();
+            }, bpm / 60);
+            clockRef.current.start();
         } else {
-            Tone.Transport.cancel();
-            Tone.Transport.stop(); // reset position so next play always starts from 0
+            disposeClock();
             setCurrentBeat(0);
         }
-    }, [triggerPlay, bpm, beats]);
+    }, [triggerPlay, beats]);
 
     return null;
 }
